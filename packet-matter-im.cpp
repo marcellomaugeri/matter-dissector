@@ -446,7 +446,7 @@ DissectIMReadRequest(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, co
         tag = TagNumFromTag(tag);
         switch (tag) {
             case ReadRequest::kTag_AttributeRequests:
-                VerifyOrExit(type == kTLVType_Array, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+                //VerifyOrExit(type == kTLVType_Array, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
                 err = tlvDissector.AddListItem(tree, hf_ReadRequest_AttributeRequests, ett_ReadRequest_AttributeRequests, tvb, AddAttributeDataIB);
                 SuccessOrExit(err);
                 continue;
@@ -1278,7 +1278,7 @@ proto_register_matter_im(void)
         &ett_SubscribeRequest_VersionList,
         &ett_SubscribeResponse_LastVendedEventList,
         &ett_CommandRequest_CommandList,
-        &ett_ReadRequest_AttributeRequests
+        &ett_ReadRequest_AttributeRequests,
         &ett_CommandResponse_InvokeResponseList,
         &ett_CommandElem,
         &ett_DataElem,
