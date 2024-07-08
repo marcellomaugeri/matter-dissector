@@ -47,6 +47,7 @@ static int ett_SubscribeRequest_VersionList = -1;
 static int ett_SubscribeResponse_LastVendedEventList = -1;
 static int ett_CommandRequest_CommandList = -1;
 static int ett_CommandResponse_InvokeResponseList = -1;
+static int ett_ReadRequest_AttributeRequests = -1;
 
 static int ett_CommandElem = -1;
 static int ett_DataElem = -1;
@@ -68,6 +69,7 @@ static int hf_ReadAttributeRequest_cluster = -1;
 static int hf_ReadAttributeRequest_attribute = -1;
 static int hf_ReadAttributeRequest_listIndex = -1;
 static int hf_ReadAttributeRequest_WildcardPathFlags = -1;
+static int hf_AttributeDataIB = -1;
 
 static int hf_ReportData_SubscriptionID = -1;
 static int hf_ReportData_AttributeReports = -1;
@@ -193,6 +195,79 @@ exit:
 }
 
 static MATTER_ERROR
+AddAttributeDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
+{
+    MATTER_ERROR err;
+    proto_tree *dataElemTree;
+
+    err = tlvDissector.AddSubTreeItem(tree, hf_AttributeDataIB, ett_CommandElem, tvb, dataElemTree);
+    SuccessOrExit(err);
+
+    err = tlvDissector.EnterContainer();
+    SuccessOrExit(err);
+
+    while (true) {
+
+        err = tlvDissector.Next();
+        if (err == MATTER_END_OF_TLV)
+            break;
+        SuccessOrExit(err);
+
+        uint64_t tag = tlvDissector.GetTag();
+        TLVType type = tlvDissector.GetType();
+
+        VerifyOrExit(IsContextTag(tag), err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+
+        tag = TagNumFromTag(tag);
+        switch (tag) {
+            case AttributePathIB::kTag_enableTagCompression:
+                VerifyOrExit(type == kTLVType_Boolean, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+                err = tlvDissector.AddBooleanItem(dataElemTree, hf_ReadAttributeRequest_enableTagCompression, tvb);
+                SuccessOrExit(err);
+                break;
+            case AttributePathIB::kTag_node:
+                VerifyOrExit(type == kTLVType_UnsignedInteger, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+                err = tlvDissector.AddUInt64Item(dataElemTree, hf_ReadAttributeRequest_node, tvb);
+                SuccessOrExit(err);
+                break;
+            case AttributePathIB::kTag_endpoint:
+                VerifyOrExit(type == kTLVType_UnsignedInteger, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+                err = tlvDissector.AddUInt16Item(dataElemTree, hf_ReadAttributeRequest_endpoint, tvb);
+                SuccessOrExit(err);
+                break;
+            case AttributePathIB::kTag_cluster:
+                VerifyOrExit(type == kTLVType_UnsignedInteger, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+                err = tlvDissector.AddUInt32Item(dataElemTree, hf_ReadAttributeRequest_cluster, tvb);
+                SuccessOrExit(err);
+                break;
+            case AttributePathIB::kTag_attribute:
+                VerifyOrExit(type == kTLVType_UnsignedInteger, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+                err = tlvDissector.AddUInt32Item(dataElemTree, hf_ReadAttributeRequest_attribute, tvb);
+                SuccessOrExit(err);
+                break;
+            case AttributePathIB::kTag_listIndex:
+                VerifyOrExit(type == kTLVType_UnsignedInteger, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+                err = tlvDissector.AddUInt16Item(dataElemTree, hf_ReadAttributeRequest_listIndex, tvb);
+                SuccessOrExit(err);
+                break;
+            case AttributePathIB::kTag_WildcardPath­Flags:
+                VerifyOrExit(type == kTLVType_UnsignedInteger, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+                err = tlvDissector.AddUInt32Item(dataElemTree, hf_ReadAttributeRequest_WildcardPathFlags, tvb);
+                SuccessOrExit(err);
+                break;
+        default:
+            ExitNow(err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+        }
+    }
+
+    err = tlvDissector.ExitContainer();
+    SuccessOrExit(err);
+
+exit:
+    return err;
+}
+
+static MATTER_ERROR
 AddInvokeResponseIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
 {
     MATTER_ERROR err;
@@ -293,13 +368,13 @@ exit:
     return msgInfo.payloadLen;
 }
 
-static int DissectIMReadAttributeRequest(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, const MatterMessageInfo& msgInfo){
+/*static int DissectIMReadAttributeRequest(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, const MatterMessageInfo& msgInfo){
     MATTER_ERROR err;
-    const uint8_t *msgData = (const uint8_t *)tvb_memdup(pinfo->pool, tvb, 0, msgInfo.payloadLen);
-    TLVDissector tlvDissector;
+    //const uint8_t *msgData = (const uint8_t *)tvb_memdup(pinfo->pool, tvb, 0, msgInfo.payloadLen);
+    //TLVDissector tlvDissector;
     int hf_entry = -1;
 
-    proto_item_append_text(proto_tree_get_parent(tree), ": Read Attribute Request");
+    proto_item_append_text(proto_tree_get_parent(tree), "- Attribute");
 
     tlvDissector.Init(msgData, msgInfo.payloadLen);
 
@@ -349,7 +424,7 @@ static int DissectIMReadAttributeRequest(tvbuff_t *tvb, packet_info *pinfo, prot
     }
 exit:
     return msgInfo.payloadLen;
-}
+}*/
 
 static int
 DissectIMReadRequest(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, const MatterMessageInfo& msgInfo)
@@ -383,9 +458,10 @@ DissectIMReadRequest(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, co
         tag = TagNumFromTag(tag);
         switch (tag) {
             case ReadRequest::kTag_AttributeRequests:
-                hf_entry = hf_ReadRequest_AttributeRequests;
-                DissectIMReadAttributeRequest(tvb, pinfo, tree, msgInfo);
-                continue; // TODO: beautify this code
+                VerifyOrExit(type == kTLVType_Array, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+                err = tlvDissector.AddListItem(tree, hf_ReadRequest_AttributeRequests, ett_ReadRequest_AttributeRequests, tvb, AddAttributeDataIB);
+                SuccessOrExit(err);
+                continue;
                 break;
             case ReadRequest::kTag_EventRequests:
                 hf_entry = hf_ReadRequest_EventRequests;
@@ -1200,7 +1276,10 @@ proto_register_matter_im(void)
             { "Property Data", "im.struct.CommandDataIB",
             FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
         },
-
+        { &hf_AttributeDataIB, 
+            { "AttributeDataIB", "im.struct.AttributeDataIB",
+            FT_NONE, BASE_NONE, NULL, 0x0, NULL, HFILL }
+        }
     };
 
     static gint *ett[] = {
@@ -1211,6 +1290,7 @@ proto_register_matter_im(void)
         &ett_SubscribeRequest_VersionList,
         &ett_SubscribeResponse_LastVendedEventList,
         &ett_CommandRequest_CommandList,
+        &ett_ReadRequest_AttributeRequests
         &ett_CommandResponse_InvokeResponseList,
         &ett_CommandElem,
         &ett_DataElem,
