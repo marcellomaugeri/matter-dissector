@@ -347,6 +347,8 @@ static int DissectIMReadAttributeRequest(tvbuff_t *tvb, packet_info *pinfo, prot
         SuccessOrExit(err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false));
 
     }
+exit:
+    return msgInfo.payloadLen;
 }
 
 static int
