@@ -285,6 +285,62 @@ exit:
     return msgInfo.payloadLen;
 }
 
+static int DissectIMReadAttributeRequest(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, const MatterMessageInfo& msgInfo){
+    MATTER_ERROR err;
+    const uint8_t *msgData = (const uint8_t *)tvb_memdup(pinfo->pool, tvb, 0, msgInfo.payloadLen);
+    TLVDissector tlvDissector;
+    int hf_entry = -1;
+
+    proto_item_append_text(proto_tree_get_parent(tree), ": Read Attribute Request");
+
+    tlvDissector.Init(msgData, msgInfo.payloadLen);
+
+    err = tlvDissector.Next(kTLVType_Structure, AnonymousTag);
+    SuccessOrExit(err);
+
+    err = tlvDissector.EnterContainer();
+    SuccessOrExit(err);
+
+    while (true) {
+
+        err = tlvDissector.Next();
+        if (err == MATTER_END_OF_TLV)
+            break;
+        SuccessOrExit(err);
+
+        uint64_t tag = tlvDissector.GetTag();
+        VerifyOrExit(IsContextTag(tag), err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+        tag = TagNumFromTag(tag);
+
+        switch (tag) {
+            case AttributePathIB::kTag_enableTagCompression:
+                hf_entry = hf_ReadAttributeRequest_enableTagCompression;
+                break;
+            case AttributePathIB::kTag_node:
+                hf_entry = hf_ReadAttributeRequest_node;
+                break;
+            case AttributePathIB::kTag_endpoint:
+                hf_entry = hf_ReadAttributeRequest_endpoint;
+                break;
+            case AttributePathIB::kTag_cluster:
+                hf_entry = hf_ReadAttributeRequest_cluster;
+                break;
+            case AttributePathIB::kTag_attribute:
+                hf_entry = hf_ReadAttributeRequest_attribute;
+                break;
+            case AttributePathIB::kTag_listIndex:
+                hf_entry = hf_ReadAttributeRequest_listIndex;
+                break;
+            case AttributePathIB::kTag_WildcardPath­Flags:
+                hf_entry = hf_ReadAttributeRequest_WildcardPathFlags;
+                break;
+
+        }
+        SuccessOrExit(err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false));
+
+    }
+}
+
 static int
 DissectIMReadRequest(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, const MatterMessageInfo& msgInfo)
 {
@@ -318,8 +374,9 @@ DissectIMReadRequest(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, co
         switch (tag) {
             case ReadRequest::kTag_AttributeRequests:
                 hf_entry = hf_ReadRequest_AttributeRequests;
+                DissectIMReadAttributeRequest(tvb, pinfo, tree, msgInfo);
+                continue; // TODO: beautify this code
                 break;
-
             case ReadRequest::kTag_EventRequests:
                 hf_entry = hf_ReadRequest_EventRequests;
                 break;
@@ -928,6 +985,43 @@ proto_register_matter_im(void)
         },
         { &hf_ReadRequest_DataVersionFilters,
             { "DataVersionFilters", "im.read_req.data_version_filters",
+            FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
+        },
+
+        // ===== Read Attribute Request ====
+        {
+            &hf_ReadAttributeRequest_enableTagCompression,
+            { "Enable Tag Compression", "im.read_attr_req.enable_tag_compression",
+            FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
+        },
+        {   
+            &hf_ReadAttributeRequest_node,
+            { "Node", "im.read_attr_req.node",
+            FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
+        },
+        {   
+            &hf_ReadAttributeRequest_endpoint,
+            { "Endpoint", "im.read_attr_req.endpoint",
+            FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
+        },
+        {   
+            &hf_ReadAttributeRequest_cluster,
+            { "Cluster", "im.read_attr_req.cluster",
+            FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
+        },
+        {   
+            &hf_ReadAttributeRequest_attribute,
+            { "Attribute", "im.read_attr_req.attribute",
+            FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
+        },
+        {   
+            &hf_ReadAttributeRequest_listIndex,
+            { "List Index", "im.read_attr_req.list_index",
+            FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
+        },
+        {   
+            &hf_ReadAttributeRequest_WildcardPathFlags,
+            { "Wildcard Path Flags", "im.read_attr_req.wildcard_path_flags",
             FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
         },
 

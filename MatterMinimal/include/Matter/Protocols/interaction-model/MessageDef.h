@@ -118,6 +118,19 @@ namespace StatusResponse
     };
 };
 
+namespace AttributePathIB {
+    enum
+    {
+        kTag_enableTagCompression    = 0,    // boolean
+        kTag_node                    = 1,    // uint64
+        kTag_endpoint                = 2,    // uint16
+        kTag_cluster                 = 3,    // uint32
+        kTag_attribute               = 4,    // uint32
+        kTag_listIndex               = 5,    // uint16
+        kTag_WildcardPath­Flags       = 6,    // uint32
+    };
+};
+
 namespace ReadRequest
 {
     enum
