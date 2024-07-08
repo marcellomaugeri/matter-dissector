@@ -201,8 +201,8 @@ AddAttributeDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
     proto_tree *dataElemTree;
     int hf_entry;
 
-    err = tlvDissector.AddSubTreeItem(tree, hf_AttributeDataIB, ett_CommandElem, tvb, dataElemTree);
-    SuccessOrExit(err);
+    /*err = tlvDissector.AddSubTreeItem(tree, hf_AttributeDataIB, ett_CommandElem, tvb, dataElemTree);
+    SuccessOrExit(err);*/
 
     err = tlvDissector.EnterContainer();
     SuccessOrExit(err);
@@ -215,7 +215,7 @@ AddAttributeDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
         SuccessOrExit(err);
 
         uint64_t tag = tlvDissector.GetTag();
-        TLVType type = tlvDissector.GetType();
+        //TLVType type = tlvDissector.GetType();
 
         VerifyOrExit(IsContextTag(tag), err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
 
