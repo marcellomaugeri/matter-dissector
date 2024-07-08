@@ -199,6 +199,7 @@ AddAttributeDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
 {
     MATTER_ERROR err;
     proto_tree *dataElemTree;
+    int hf_entry;
 
     err = tlvDissector.AddSubTreeItem(tree, hf_AttributeDataIB, ett_CommandElem, tvb, dataElemTree);
     SuccessOrExit(err);
@@ -218,46 +219,33 @@ AddAttributeDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
 
         VerifyOrExit(IsContextTag(tag), err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
 
+
         tag = TagNumFromTag(tag);
         switch (tag) {
             case AttributePathIB::kTag_enableTagCompression:
-                VerifyOrExit(type == kTLVType_Boolean, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
-                err = tlvDissector.AddBooleanItem(dataElemTree, hf_ReadAttributeRequest_enableTagCompression, tvb);
-                SuccessOrExit(err);
+                hf_entry = hf_ReadAttributeRequest_enableTagCompression;
                 break;
             case AttributePathIB::kTag_node:
-                VerifyOrExit(type == kTLVType_UnsignedInteger, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
-                err = tlvDissector.AddUInt64Item(dataElemTree, hf_ReadAttributeRequest_node, tvb);
-                SuccessOrExit(err);
+                hf_entry = hf_ReadAttributeRequest_node;
                 break;
             case AttributePathIB::kTag_endpoint:
-                VerifyOrExit(type == kTLVType_UnsignedInteger, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
-                err = tlvDissector.AddUInt16Item(dataElemTree, hf_ReadAttributeRequest_endpoint, tvb);
-                SuccessOrExit(err);
+                hf_entry = hf_ReadAttributeRequest_endpoint;
                 break;
             case AttributePathIB::kTag_cluster:
-                VerifyOrExit(type == kTLVType_UnsignedInteger, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
-                err = tlvDissector.AddUInt32Item(dataElemTree, hf_ReadAttributeRequest_cluster, tvb);
-                SuccessOrExit(err);
+                hf_entry = hf_ReadAttributeRequest_cluster;
                 break;
             case AttributePathIB::kTag_attribute:
-                VerifyOrExit(type == kTLVType_UnsignedInteger, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
-                err = tlvDissector.AddUInt32Item(dataElemTree, hf_ReadAttributeRequest_attribute, tvb);
-                SuccessOrExit(err);
+                hf_entry = hf_ReadAttributeRequest_attribute;
                 break;
             case AttributePathIB::kTag_listIndex:
-                VerifyOrExit(type == kTLVType_UnsignedInteger, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
-                err = tlvDissector.AddUInt16Item(dataElemTree, hf_ReadAttributeRequest_listIndex, tvb);
-                SuccessOrExit(err);
+                hf_entry = hf_ReadAttributeRequest_listIndex;
                 break;
             case AttributePathIB::kTag_WildcardPath­Flags:
-                VerifyOrExit(type == kTLVType_UnsignedInteger, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
-                err = tlvDissector.AddUInt32Item(dataElemTree, hf_ReadAttributeRequest_WildcardPathFlags, tvb);
-                SuccessOrExit(err);
+                hf_entry = hf_ReadAttributeRequest_WildcardPathFlags;
                 break;
-        default:
-            ExitNow(err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+
         }
+        SuccessOrExit(err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false));
     }
 
     err = tlvDissector.ExitContainer();
