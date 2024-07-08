@@ -201,9 +201,6 @@ AddAttributeDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
     proto_tree *dataElemTree;
     int hf_entry;
 
-    /*err = tlvDissector.AddSubTreeItem(tree, hf_AttributeDataIB, ett_CommandElem, tvb, dataElemTree);
-    SuccessOrExit(err);*/
-
     err = tlvDissector.EnterContainer();
     SuccessOrExit(err);
 
@@ -215,11 +212,7 @@ AddAttributeDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
         SuccessOrExit(err);
 
         uint64_t tag = tlvDissector.GetTag();
-        //TLVType type = tlvDissector.GetType();
-
         VerifyOrExit(IsContextTag(tag), err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
-
-
         tag = TagNumFromTag(tag);
         switch (tag) {
             case AttributePathIB::kTag_enableTagCompression:
@@ -243,7 +236,6 @@ AddAttributeDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
             case AttributePathIB::kTag_WildcardPath­Flags:
                 hf_entry = hf_ReadAttributeRequest_WildcardPathFlags;
                 break;
-
         }
         SuccessOrExit(err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false));
     }
@@ -440,13 +432,14 @@ DissectIMReadRequest(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, co
         SuccessOrExit(err);
 
         uint64_t tag = tlvDissector.GetTag();
+        TLVType type = tlvDissector.GetType();
 
         VerifyOrExit(IsContextTag(tag), err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
 
         tag = TagNumFromTag(tag);
         switch (tag) {
             case ReadRequest::kTag_AttributeRequests:
-                //VerifyOrExit(type == kTLVType_Array, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+                VerifyOrExit(type == kTLVType_Array, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
                 err = tlvDissector.AddListItem(tree, hf_ReadRequest_AttributeRequests, ett_ReadRequest_AttributeRequests, tvb, AddAttributeDataIB);
                 SuccessOrExit(err);
                 continue;
@@ -903,6 +896,7 @@ DissectIMCommandResponse(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_
         SuccessOrExit(err);
 
         uint64_t tag = tlvDissector.GetTag();
+        TLVType type = tlvDissector.GetType();
         VerifyOrExit(IsContextTag(tag), err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
         tag = TagNumFromTag(tag);
 
@@ -912,10 +906,10 @@ DissectIMCommandResponse(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_
                 hf_entry = hf_CommandResponse_SuppressResponse;
                 break;
 
-            case InvokeCommandResponse::kTag_InvokeResponses:
+            /*case InvokeCommandResponse::kTag_InvokeResponses:
                 hf_entry = hf_CommandResponse_InvokeResponses;
-                break;
-/*
+                break;*/
+
             // Alternative implementation to perform deeper parsing of element:
             case InvokeCommandResponse::kTag_InvokeResponses:
                 VerifyOrExit(type == kTLVType_Array, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
@@ -923,7 +917,7 @@ DissectIMCommandResponse(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_
                 err = tlvDissector.AddListItem(tree, hf_CommandResponse_InvokeResponsesDetail, ett_CommandResponse_InvokeResponseList, tvb, AddInvokeResponseIB);
                 SuccessOrExit(err);
                 break;
-*/
+
 
             case CommonActionInfo::kTag_InteractionModelRevision: 
                 hf_entry = hf_ImCommon_Version;
