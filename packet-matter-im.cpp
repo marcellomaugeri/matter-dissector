@@ -61,6 +61,14 @@ static int hf_ReadRequest_EventFilters  = -1;
 static int hf_ReadRequest_IsFabricFiltered = -1;
 static int hf_ReadRequest_DataVersionFilters = -1;
 
+static int hf_ReadAttributeRequest_enableTagCompression = -1;
+static int hf_ReadAttributeRequest_node = -1;
+static int hf_ReadAttributeRequest_endpoint = -1;
+static int hf_ReadAttributeRequest_cluster = -1;
+static int hf_ReadAttributeRequest_attribute = -1;
+static int hf_ReadAttributeRequest_listIndex = -1;
+static int hf_ReadAttributeRequest_WildcardPathFlags = -1;
+
 static int hf_ReportData_SubscriptionID = -1;
 static int hf_ReportData_AttributeReports = -1;
 static int hf_ReportData_EventReports = -1;
