@@ -63,8 +63,8 @@ CPPFLAGS = $(CFLAGS)
 LDFLAGS = $(GLIB_LDFLAGS) $(WIRESHARK_LDFLAGS) $(MATTER_LDFLAGS) $(OPENSSL_LDFLAGS) $(OPT_FLAGS) -lstdc++
 
 ifeq ($(UNAME_S),Darwin)
-PLUGIN_OUT = matter-dissector.dylib
-LDFLAGS += -Wl,-install_name=$(PLUGIN_NAME).dylib
+PLUGIN_OUT = matter-dissector.so
+LDFLAGS += -L$(WIRESHARK_BUILD_DIR) -L$(WIRESHARK_BUILD_DIR)/run -lwireshark -lwiretap -lwsutil -Wl,-rpath,$(WIRESHARK_BUILD_DIR)/run
 else
 PLUGIN_OUT = matter-dissector.so
 LDFLAGS += -Wl,-soname=$(PLUGIN_NAME).so -Wl,-Map -Wl,$(PLUGIN_NAME).map -Wl,--cref -Wl,--exclude-libs=ALL -Wl,--gc-sections
@@ -103,8 +103,7 @@ tests/test-packet-matter-decrypt.exe: tests/test-packet-matter-decrypt.o packet-
 
 
 install : $(PLUGIN_OUT)
-	mkdir -p ~/.local/lib/wireshark/plugins/3.6/epan
-	cp $(PLUGIN_OUT) ~/.local/lib/wireshark/plugins/3.6/epan
+	cp $(PLUGIN_OUT) $(WIRESHARK_BUILD_DIR)/run/Wireshark.app/Contents/PlugIns/wireshark/3-6/epan/$(PLUGIN_OUT)
 
 test : install
 	WIRESHARK_RUN_FROM_BUILD_DIRECTORY=1 $(WIRESHARK_BUILD_DIR)/run/wireshark $(TEST_INPUT)
