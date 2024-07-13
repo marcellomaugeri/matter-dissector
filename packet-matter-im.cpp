@@ -51,6 +51,8 @@ static int ett_ReadRequest_AttributeRequests = -1;
 
 static int ett_CommandElem = -1;
 static int ett_DataElem = -1;
+static int ett_AttributeStatusIB = -1;
+static int ett_AttributeDataIB = -1;
 
 static int hf_IM_SubscriptionId = -1;
 
@@ -69,7 +71,17 @@ static int hf_ReadAttributeRequest_cluster = -1;
 static int hf_ReadAttributeRequest_attribute = -1;
 static int hf_ReadAttributeRequest_listIndex = -1;
 static int hf_ReadAttributeRequest_WildcardPathFlags = -1;
+
 static int hf_AttributeDataIB = -1;
+static int hf_AttributeDataIB_DataVersion = -1;
+static int hf_AttributePathIB = -1;
+
+static int hf_AttributeReportIB = -1;
+static int hf_AttributeReportIB_AttributeStatus = -1;
+static int hf_AttributeReportIB_AttributeData = -1;
+
+static int hf_StatusIB_Status = -1;
+static int hf_StatusIB_ClusterStatus = -1;
 
 static int hf_ReportData_SubscriptionID = -1;
 static int hf_ReportData_AttributeReports = -1;
@@ -112,6 +124,7 @@ static int hf_CommandResponse_InvokeResponsesDetail = -1;
 static int hf_CommandResponse_Version = -1;
 static int hf_CommandResponse_Result = -1;
 static int hf_CommandStatusIB = -1;
+static int hf_StatusIB = -1;
 static int hf_CommandDataIB = -1;
 
 static int hf_ImCommon_Version = -1;
@@ -195,11 +208,14 @@ exit:
 }
 
 static MATTER_ERROR
-AddAttributeDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
+AddStatusIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
 {
     MATTER_ERROR err;
     proto_tree *dataElemTree;
     int hf_entry;
+
+    err = tlvDissector.AddSubTreeItem(tree, hf_StatusIB, ett_DataElem, tvb, dataElemTree);
+    SuccessOrExit(err);
 
     err = tlvDissector.EnterContainer();
     SuccessOrExit(err);
@@ -212,6 +228,53 @@ AddAttributeDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
         SuccessOrExit(err);
 
         uint64_t tag = tlvDissector.GetTag();
+        //TLVType type = tlvDissector.GetType();
+        VerifyOrExit(IsContextTag(tag), err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+        tag = TagNumFromTag(tag);
+        switch (tag) {
+            case StatusIB::kTag_Status:
+                hf_entry = hf_StatusIB_Status;
+                err = tlvDissector.AddTypedItem(dataElemTree, hf_entry, tvb);
+                break;
+            case AttributeStatusIB::kTag_Status:
+                hf_entry = hf_StatusIB_ClusterStatus;
+                err = tlvDissector.AddTypedItem(dataElemTree, hf_entry, tvb);
+                break;
+            default:
+                ExitNow(err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+        }
+        SuccessOrExit(err);
+    }
+
+    err = tlvDissector.ExitContainer();
+    SuccessOrExit(err);
+
+exit:
+    return err;
+}
+
+static MATTER_ERROR
+AddAttributePathIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
+{
+    MATTER_ERROR err;
+    proto_tree *dataElemTree;
+    int hf_entry;
+
+    err = tlvDissector.AddSubTreeItem(tree, hf_AttributePathIB, ett_DataElem, tvb, dataElemTree);
+    SuccessOrExit(err);
+
+    err = tlvDissector.EnterContainer();
+    SuccessOrExit(err);
+
+    while (true) {
+
+        err = tlvDissector.Next();
+        if (err == MATTER_END_OF_TLV)
+            break;
+        SuccessOrExit(err);
+
+        uint64_t tag = tlvDissector.GetTag();
+        //TLVType type = tlvDissector.GetType();
         VerifyOrExit(IsContextTag(tag), err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
         tag = TagNumFromTag(tag);
         switch (tag) {
@@ -233,11 +296,13 @@ AddAttributeDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
             case AttributePathIB::kTag_listIndex:
                 hf_entry = hf_ReadAttributeRequest_listIndex;
                 break;
-            case AttributePathIB::kTag_WildcardPath­Flags:
+            case AttributePathIB::kTag_WildcardPathFlags:
                 hf_entry = hf_ReadAttributeRequest_WildcardPathFlags;
                 break;
+            default:
+                ExitNow(err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
         }
-        SuccessOrExit(err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false));
+        SuccessOrExit(err = tlvDissector.AddGenericTLVItem(dataElemTree, hf_entry, tvb, false));
     }
 
     err = tlvDissector.ExitContainer();
@@ -246,6 +311,145 @@ AddAttributeDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
 exit:
     return err;
 }
+
+static MATTER_ERROR
+AddAttributeDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
+{
+    MATTER_ERROR err;
+    proto_tree *dataElemTree;
+    int hf_entry;
+
+    err = tlvDissector.AddSubTreeItem(tree, hf_AttributeDataIB, ett_AttributeDataIB, tvb, dataElemTree);
+    SuccessOrExit(err);
+
+    err = tlvDissector.EnterContainer();
+    SuccessOrExit(err);
+
+    while (true) {
+
+        err = tlvDissector.Next();
+        if (err == MATTER_END_OF_TLV)
+            break;
+        SuccessOrExit(err);
+
+        uint64_t tag = tlvDissector.GetTag();
+        //TLVType type = tlvDissector.GetType();
+        VerifyOrExit(IsContextTag(tag), err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+        tag = TagNumFromTag(tag);
+        switch (tag) {
+            case AttributeDataIB::kTag_DataVersion:
+                hf_entry = hf_AttributeDataIB_DataVersion;
+                err = tlvDissector.AddTypedItem(dataElemTree, hf_entry, tvb);
+                break;
+            case AttributeDataIB::kTag_Path:
+                err = AddAttributePathIB(tlvDissector, dataElemTree, tvb);
+            case AttributeDataIB::kTag_Data:
+                printf("Di qui ci passiamo\n");
+                //err = tlvDissector.AddGenericTLVItem(dataElemTree, hf_DataElem_PropertyData, tvb, false);
+                err = tlvDissector.AddIMPathItem(dataElemTree, hf_DataElem_PropertyPath, tvb);
+            default:
+                ExitNow(err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+        }
+        SuccessOrExit(err);
+    }
+
+    err = tlvDissector.ExitContainer();
+    SuccessOrExit(err);
+
+exit:
+    return err;
+}
+
+
+static MATTER_ERROR
+AddAttributeStatusIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
+{
+    MATTER_ERROR err;
+    proto_tree *dataElemTree;
+    //int hf_entry;
+
+    err = tlvDissector.AddSubTreeItem(tree, hf_AttributeReportIB_AttributeStatus, ett_AttributeStatusIB, tvb, dataElemTree);
+    SuccessOrExit(err);
+
+    err = tlvDissector.EnterContainer();
+    SuccessOrExit(err);
+
+    while (true) {
+
+        err = tlvDissector.Next();
+        if (err == MATTER_END_OF_TLV)
+            break;
+        SuccessOrExit(err);
+
+        uint64_t tag = tlvDissector.GetTag();
+        //TLVType type = tlvDissector.GetType();
+        VerifyOrExit(IsContextTag(tag), err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+        tag = TagNumFromTag(tag);
+        switch (tag) {
+            case AttributeStatusIB::kTag_Path:
+                err = AddAttributeDataIB(tlvDissector, dataElemTree, tvb);
+                break;
+            case AttributeStatusIB::kTag_Status:
+                err = AddStatusIB(tlvDissector, dataElemTree, tvb);
+                break;
+            default:
+                ExitNow(err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+        }
+        SuccessOrExit(err);
+    }
+
+    err = tlvDissector.ExitContainer();
+    SuccessOrExit(err);
+
+exit:
+    return err;
+}
+
+static MATTER_ERROR
+AddAttributeReportIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
+{
+    MATTER_ERROR err;
+    proto_tree *dataElemTree;
+    //int hf_entry;
+
+    err = tlvDissector.AddSubTreeItem(tree, hf_AttributeReportIB, ett_DataElem, tvb, dataElemTree);
+    SuccessOrExit(err);
+
+    err = tlvDissector.EnterContainer();
+    SuccessOrExit(err);
+
+    while (true) {
+
+        err = tlvDissector.Next();
+        if (err == MATTER_END_OF_TLV)
+            break;
+        SuccessOrExit(err);
+
+        uint64_t tag = tlvDissector.GetTag();
+        //TLVType type = tlvDissector.GetType();
+        VerifyOrExit(IsContextTag(tag), err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+        tag = TagNumFromTag(tag);
+        switch (tag) {
+            case AttributeReportIB::kTag_AttributeStatus:
+                err = AddAttributeStatusIB(tlvDissector, dataElemTree, tvb);
+                break;
+            case AttributeReportIB::kTag_AttributeData:
+                err = AddAttributeDataIB(tlvDissector, dataElemTree, tvb);
+                break;
+            default:
+                ExitNow(err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+        }
+        SuccessOrExit(err);
+    }
+
+    err = tlvDissector.ExitContainer();
+    SuccessOrExit(err);
+
+exit:
+    return err;
+}
+
+
 
 static MATTER_ERROR
 AddInvokeResponseIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
@@ -440,7 +644,7 @@ DissectIMReadRequest(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, co
         switch (tag) {
             case ReadRequest::kTag_AttributeRequests:
                 VerifyOrExit(type == kTLVType_Array, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
-                err = tlvDissector.AddListItem(tree, hf_ReadRequest_AttributeRequests, ett_ReadRequest_AttributeRequests, tvb, AddAttributeDataIB);
+                err = tlvDissector.AddListItem(tree, hf_ReadRequest_AttributeRequests, ett_ReadRequest_AttributeRequests, tvb, AddAttributePathIB);
                 SuccessOrExit(err);
                 continue;
                 break;
@@ -505,39 +709,49 @@ DissectIMReportData(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, con
         SuccessOrExit(err);
 
         uint64_t tag = tlvDissector.GetTag();
+        TLVType type = tlvDissector.GetType();
         VerifyOrExit(IsContextTag(tag), err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
         tag = TagNumFromTag(tag);
 
         switch (tag) {
             case ReportData::kTag_SubscriptionID:
                 hf_entry = hf_ReportData_SubscriptionID;
+                err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false);
                 break;
 
             case ReportData::kTag_AttributeReports:
+                VerifyOrExit(type == kTLVType_Array, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
                 hf_entry = hf_ReportData_AttributeReports;
+                // To fix ett
+                err = tlvDissector.AddListItem(tree, hf_entry, ett_DataElem, tvb, AddAttributeReportIB);
                 break;
 
             case ReportData::kTag_EventReports:
                 hf_entry = hf_ReportData_EventReports;
+                err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false);
                 break;
 
             case ReportData::kTag_MoreChunkedMessages:
                 hf_entry = hf_ReportData_MoreChunkedMessages;
+                err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false);
                 break;
 
             case ReportData::kTag_SuppressResponse:
                 hf_entry = hf_ReportData_SuppressResponse;
+                err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false);
                 break;
 
             case CommonActionInfo::kTag_InteractionModelRevision: 
                 hf_entry = hf_ImCommon_Version;
+                err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false);
                 break;
 
             default:
                 hf_entry = hf_ImCommon_Unknown;
+                err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false);
                 break;
         }
-        SuccessOrExit(err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false));
+        SuccessOrExit(err);
 
     }
 
@@ -1093,6 +1307,18 @@ proto_register_matter_im(void)
             FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
         },
 
+        // ===== AttributeReport =====
+        {   
+            &hf_AttributeReportIB_AttributeStatus,
+            { "AttributeStatusIB", "im.attribute_report.attribute_status",
+            FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
+        },
+        {   
+            &hf_AttributeReportIB_AttributeData,
+            { "AttributeDataIB", "im.attribute_report.attribute_data",
+            FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
+        },        
+
         // ===== Report Data =====
         { &hf_ReportData_SubscriptionID,
             { "SubscriptionID", "im.report_data.SubscriptionID",
@@ -1250,6 +1476,22 @@ proto_register_matter_im(void)
             { "CommandStatusIB", "im.struct.CommandStatusIB",
             FT_NONE, BASE_NONE, NULL, 0x0, NULL, HFILL }
         },
+        { &hf_StatusIB,
+            { "StatusIB", "im.struct.CommandStatusIB",
+            FT_NONE, BASE_NONE, NULL, 0x0, NULL, HFILL }
+        },
+        {
+            &hf_StatusIB_Status,
+            { "Status", "im.struct.statusIB",
+            FT_UINT16, BASE_DEC, NULL, 0x0, NULL, HFILL }
+            
+        },
+        {
+            &hf_StatusIB_ClusterStatus,
+            { "Cluster Status", "im.struct.clusterStatus",
+            FT_UINT16, BASE_DEC, NULL, 0x0, NULL, HFILL }
+            
+        },
         { &hf_DataElem_PropertyPath,
             { "Property Path", "im.struct.CommandPathIB",
             FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
@@ -1261,7 +1503,19 @@ proto_register_matter_im(void)
         { &hf_AttributeDataIB, 
             { "AttributeDataIB", "im.struct.AttributeDataIB",
             FT_NONE, BASE_NONE, NULL, 0x0, NULL, HFILL }
-        }
+        },
+        { &hf_AttributePathIB, 
+            { "AttributePathIB", "im.struct.AttributePathIB",
+            FT_NONE, BASE_NONE, NULL, 0x0, NULL, HFILL }
+        },
+        { &hf_AttributeDataIB_DataVersion,
+            { "DataVersion", "im.struct.AttributeDataIB.DataVersion",
+            FT_UINT32, BASE_DEC, NULL, 0x0, NULL, HFILL }
+        },
+        { &hf_AttributeReportIB, 
+            { "AttributeReportIB", "im.struct.AttributeReportIB",
+            FT_NONE, BASE_NONE, NULL, 0x0, NULL, HFILL }
+        },
     };
 
     static gint *ett[] = {
@@ -1276,6 +1530,8 @@ proto_register_matter_im(void)
         &ett_CommandResponse_InvokeResponseList,
         &ett_CommandElem,
         &ett_DataElem,
+        &ett_AttributeStatusIB,
+        &ett_AttributeDataIB
     };
 
     proto_im = proto_register_protocol(

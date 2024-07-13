@@ -127,9 +127,34 @@ namespace AttributePathIB {
         kTag_cluster                 = 3,    // uint32
         kTag_attribute               = 4,    // uint32
         kTag_listIndex               = 5,    // uint16
-        kTag_WildcardPath­Flags       = 6,    // uint32
+        kTag_WildcardPathFlags       = 6,    // uint32
     };
 };
+
+namespace AttributeReportIB {
+    enum
+    {
+        kTag_AttributeStatus         = 0,    // AttributeStatusIB
+        kTag_AttributeData           = 1,    // AttributeDataIB
+    };
+}
+
+namespace AttributeDataIB {
+    enum
+    {
+        kTag_DataVersion             = 0,    // uint32
+        kTag_Path                    = 1,    // AttributePathIB
+        kTag_Data                    = 2,    // variable
+    };
+}
+
+namespace AttributeStatusIB {
+    enum
+    {
+        kTag_Path                    = 0,    // AttributePathIB
+        kTag_Status                  = 1,    // StatusIB
+    };
+}
 
 namespace ReadRequest
 {
