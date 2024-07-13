@@ -169,6 +169,9 @@ AddCommandDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
     err = tlvDissector.AddSubTreeItem(tree, hf_CommandDataIB, ett_CommandElem, tvb, dataElemTree);
     SuccessOrExit(err);
 
+    err = tlvDissector.Next(kTLVType_Structure, AnonymousTag);
+    SuccessOrExit(err);
+
     err = tlvDissector.EnterContainer();
     SuccessOrExit(err);
 
@@ -197,6 +200,7 @@ AddCommandDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
             break;
         default:
             ExitNow(err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+            break;
         }
     }
 
@@ -204,6 +208,8 @@ AddCommandDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
     SuccessOrExit(err);
 
 exit:
+    if(err != MATTER_NO_ERROR && err != MATTER_END_OF_TLV)
+        printf("Something happened in AddCommandDataIB: %d\n", err);
     return err;
 }
 
@@ -242,6 +248,7 @@ AddStatusIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
                 break;
             default:
                 ExitNow(err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+                break;
         }
         SuccessOrExit(err);
     }
@@ -250,6 +257,8 @@ AddStatusIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
     SuccessOrExit(err);
 
 exit:
+    if(err != MATTER_NO_ERROR && err != MATTER_END_OF_TLV)
+        printf("Something happened in AddStatusIB: %d\n", err);
     return err;
 }
 
@@ -274,7 +283,7 @@ AddAttributePathIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
         SuccessOrExit(err);
 
         uint64_t tag = tlvDissector.GetTag();
-        //TLVType type = tlvDissector.GetType();
+        TLVType type = tlvDissector.GetType();
         VerifyOrExit(IsContextTag(tag), err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
         tag = TagNumFromTag(tag);
         switch (tag) {
@@ -301,20 +310,21 @@ AddAttributePathIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
                 break;
             default:
                 ExitNow(err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+                break;
         }
-        SuccessOrExit(err = tlvDissector.AddGenericTLVItem(dataElemTree, hf_entry, tvb, false));
+        SuccessOrExit(err = tlvDissector.AddTypedItem(dataElemTree, hf_entry, tvb));
     }
-
     err = tlvDissector.ExitContainer();
     SuccessOrExit(err);
-
+    return err;
 exit:
+    if(err != MATTER_NO_ERROR && err != MATTER_END_OF_TLV)
+        printf("Something happened in AddAttributePathIB: %d\n", err);
     return err;
 }
 
 static MATTER_ERROR
-AddAttributeDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
-{
+AddAttributeDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb){
     MATTER_ERROR err;
     proto_tree *dataElemTree;
     int hf_entry;
@@ -333,7 +343,7 @@ AddAttributeDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
         SuccessOrExit(err);
 
         uint64_t tag = tlvDissector.GetTag();
-        //TLVType type = tlvDissector.GetType();
+        TLVType type = tlvDissector.GetType();
         VerifyOrExit(IsContextTag(tag), err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
         tag = TagNumFromTag(tag);
         switch (tag) {
@@ -343,20 +353,23 @@ AddAttributeDataIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
                 break;
             case AttributeDataIB::kTag_Path:
                 err = AddAttributePathIB(tlvDissector, dataElemTree, tvb);
+                break;
             case AttributeDataIB::kTag_Data:
-                printf("Di qui ci passiamo\n");
-                //err = tlvDissector.AddGenericTLVItem(dataElemTree, hf_DataElem_PropertyData, tvb, false);
-                err = tlvDissector.AddIMPathItem(dataElemTree, hf_DataElem_PropertyPath, tvb);
+                err = tlvDissector.AddGenericTLVItem(dataElemTree, hf_DataElem_PropertyData, tvb, true);
+                break;
             default:
                 ExitNow(err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+                break;
         }
         SuccessOrExit(err);
     }
 
     err = tlvDissector.ExitContainer();
     SuccessOrExit(err);
-
+    return err;
 exit:
+    if(err != MATTER_NO_ERROR && err != MATTER_END_OF_TLV)
+        printf("Something happened in AddAttributeDataIB: %d\n", err);
     return err;
 }
 
@@ -394,14 +407,17 @@ AddAttributeStatusIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb
                 break;
             default:
                 ExitNow(err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+                break;
         }
         SuccessOrExit(err);
     }
 
     err = tlvDissector.ExitContainer();
     SuccessOrExit(err);
-
+    return err;
 exit:
+    if(err != MATTER_NO_ERROR && err != MATTER_END_OF_TLV)
+        printf("Something happened in AddAttributeStatusIB: %d\n", err);
     return err;
 }
 
@@ -410,16 +426,14 @@ AddAttributeReportIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb
 {
     MATTER_ERROR err;
     proto_tree *dataElemTree;
-    //int hf_entry;
 
     err = tlvDissector.AddSubTreeItem(tree, hf_AttributeReportIB, ett_DataElem, tvb, dataElemTree);
     SuccessOrExit(err);
 
     err = tlvDissector.EnterContainer();
     SuccessOrExit(err);
-
     while (true) {
-
+        
         err = tlvDissector.Next();
         if (err == MATTER_END_OF_TLV)
             break;
@@ -427,7 +441,7 @@ AddAttributeReportIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb
 
         uint64_t tag = tlvDissector.GetTag();
         //TLVType type = tlvDissector.GetType();
-        VerifyOrExit(IsContextTag(tag), err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+        //VerifyOrExit(IsContextTag(tag), err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
         tag = TagNumFromTag(tag);
         switch (tag) {
             case AttributeReportIB::kTag_AttributeStatus:
@@ -438,14 +452,16 @@ AddAttributeReportIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb
                 break;
             default:
                 ExitNow(err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
+                break;
         }
         SuccessOrExit(err);
     }
-
     err = tlvDissector.ExitContainer();
     SuccessOrExit(err);
-
+    return err;
 exit:
+    if(err != MATTER_NO_ERROR && err != MATTER_END_OF_TLV)
+        printf("Something happened in AddAttributeReportIB: %d\n", err);
     return err;
 }
 
@@ -495,6 +511,8 @@ AddInvokeResponseIB(TLVDissector& tlvDissector, proto_tree *tree, tvbuff_t* tvb)
     SuccessOrExit(err);
 
 exit:
+    if(err != MATTER_NO_ERROR && err != MATTER_END_OF_TLV)
+        printf("Something happened in AddInvokeResponseIB: %d\n", err);
     return err;
 }
 
@@ -549,6 +567,8 @@ DissectIMStatusResponse(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_,
     SuccessOrExit(err);
 
 exit:
+    if(err != MATTER_NO_ERROR && err != MATTER_END_OF_TLV)
+        printf("Something happened in DissectIMStatusResponse: %d\n", err);
     return msgInfo.payloadLen;
 }
 
@@ -645,41 +665,47 @@ DissectIMReadRequest(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, co
             case ReadRequest::kTag_AttributeRequests:
                 VerifyOrExit(type == kTLVType_Array, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
                 err = tlvDissector.AddListItem(tree, hf_ReadRequest_AttributeRequests, ett_ReadRequest_AttributeRequests, tvb, AddAttributePathIB);
-                SuccessOrExit(err);
-                continue;
                 break;
             case ReadRequest::kTag_EventRequests:
                 hf_entry = hf_ReadRequest_EventRequests;
+                err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false);
                 break;
 
             case ReadRequest::kTag_EventFilters:
                 hf_entry = hf_ReadRequest_EventFilters;
+                err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false);
                 break;
 
             case ReadRequest::kTag_IsFabricFiltered:
                 hf_entry = hf_ReadRequest_IsFabricFiltered;
+                err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false);
                 break;
 
             case ReadRequest::kTag_DataVersionFilters:
                 hf_entry = hf_ReadRequest_DataVersionFilters;
+                err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false);
                 break;
 
             case CommonActionInfo::kTag_InteractionModelRevision: 
                 hf_entry = hf_ImCommon_Version;
+                err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false);
                 break;
 
             default:
                 hf_entry = hf_ImCommon_Unknown;
+                err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false);
                 break;
         }
-        SuccessOrExit(err = tlvDissector.AddGenericTLVItem(tree, hf_entry, tvb, false));
+        SuccessOrExit(err);
 
     }
-
     err = tlvDissector.ExitContainer();
     SuccessOrExit(err);
+    return 0;
 
 exit:
+    if(err != MATTER_NO_ERROR && err != MATTER_END_OF_TLV)
+        printf("Something happened in DissectIMReadRequest: %d\n", err);
     return msgInfo.payloadLen;
 }
 
@@ -759,6 +785,8 @@ DissectIMReportData(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, con
     SuccessOrExit(err);
 
 exit:
+    if(err != MATTER_NO_ERROR && err != MATTER_END_OF_TLV)
+        printf("Something happened in DissectIMReportData: %d\n", err);
     return msgInfo.payloadLen;
 }
 
@@ -840,6 +868,8 @@ DissectIMSubscribeRequest(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U
     SuccessOrExit(err);
 
 exit:
+    if(err != MATTER_NO_ERROR && err != MATTER_END_OF_TLV)
+        printf("Something happened in DissectIMSubscribeRequest: %d\n", err);
     return msgInfo.payloadLen;
 }
 
@@ -897,6 +927,8 @@ DissectIMSubscribeResponse(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _
     SuccessOrExit(err);
 
 exit:
+    if(err != MATTER_NO_ERROR && err != MATTER_END_OF_TLV)
+        printf("Something happened in DissectIMSubscribeResponse: %d\n", err);
     return msgInfo.payloadLen;
 }
 
@@ -962,6 +994,8 @@ DissectIMWriteRequest(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, c
     SuccessOrExit(err);
 
 exit:
+    if(err != MATTER_NO_ERROR && err != MATTER_END_OF_TLV)
+        printf("Something happened in DissectIMWriteRequest: %d\n", err);
     return msgInfo.payloadLen;
 }
 
@@ -1014,6 +1048,8 @@ DissectIMWriteResponse(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, 
     SuccessOrExit(err);
 
 exit:
+    if(err != MATTER_NO_ERROR && err != MATTER_END_OF_TLV)
+        printf("Something happened in DissectIMWriteResponse: %d\n", err);
     return msgInfo.payloadLen;
 }
 
@@ -1081,6 +1117,8 @@ DissectIMCommandRequest(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_,
     SuccessOrExit(err);
 
 exit:
+    if(err != MATTER_NO_ERROR && err != MATTER_END_OF_TLV)
+        printf("Something happened in DissectIMCommandRequest: %d\n", err);
     return msgInfo.payloadLen;
 }
 
@@ -1150,6 +1188,8 @@ DissectIMCommandResponse(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_
     SuccessOrExit(err);
 
 exit:
+    if(err != MATTER_NO_ERROR && err != MATTER_END_OF_TLV)
+        printf("Something happened in DissectIMCommandResponse: %d\n", err);
     return msgInfo.payloadLen;
 }
 
@@ -1171,6 +1211,8 @@ DissectIMTimedRequest(tvbuff_t *tvb, packet_info *pinfo, proto_tree *tree _U_, c
     SuccessOrExit(err);
 
 exit:
+    if(err != MATTER_NO_ERROR && err != MATTER_END_OF_TLV)
+        printf("Something happened in DissectIMTimedRequest: %d\n", err);
     return msgInfo.payloadLen;
 }
 
@@ -1274,37 +1316,37 @@ proto_register_matter_im(void)
         {
             &hf_ReadAttributeRequest_enableTagCompression,
             { "Enable Tag Compression", "im.read_attr_req.enable_tag_compression",
-            FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
+            FT_BOOLEAN, 1, NULL, 0x0, NULL, HFILL }
         },
         {   
             &hf_ReadAttributeRequest_node,
             { "Node", "im.read_attr_req.node",
-            FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
+            FT_UINT64, BASE_HEX, NULL, 0x0, NULL, HFILL }
         },
         {   
             &hf_ReadAttributeRequest_endpoint,
             { "Endpoint", "im.read_attr_req.endpoint",
-            FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
+            FT_UINT16, BASE_HEX, NULL, 0x0, NULL, HFILL }
         },
         {   
             &hf_ReadAttributeRequest_cluster,
             { "Cluster", "im.read_attr_req.cluster",
-            FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
+            FT_UINT32, BASE_HEX, NULL, 0x0, NULL, HFILL }
         },
         {   
             &hf_ReadAttributeRequest_attribute,
             { "Attribute", "im.read_attr_req.attribute",
-            FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
+            FT_UINT32, BASE_HEX, NULL, 0x0, NULL, HFILL }
         },
         {   
             &hf_ReadAttributeRequest_listIndex,
             { "List Index", "im.read_attr_req.list_index",
-            FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
+            FT_UINT16, BASE_DEC, NULL, 0x0, NULL, HFILL }
         },
         {   
             &hf_ReadAttributeRequest_WildcardPathFlags,
             { "Wildcard Path Flags", "im.read_attr_req.wildcard_path_flags",
-            FT_STRING, BASE_NONE, NULL, 0x0, NULL, HFILL }
+            FT_UINT32, BASE_HEX, NULL, 0x0, NULL, HFILL }
         },
 
         // ===== AttributeReport =====
@@ -1510,7 +1552,7 @@ proto_register_matter_im(void)
         },
         { &hf_AttributeDataIB_DataVersion,
             { "DataVersion", "im.struct.AttributeDataIB.DataVersion",
-            FT_UINT32, BASE_DEC, NULL, 0x0, NULL, HFILL }
+            FT_UINT32, BASE_HEX, NULL, 0x0, NULL, HFILL }
         },
         { &hf_AttributeReportIB, 
             { "AttributeReportIB", "im.struct.AttributeReportIB",

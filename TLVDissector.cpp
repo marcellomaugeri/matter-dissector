@@ -276,9 +276,7 @@ AppendIMPath(TLVReader& reader, char *& strBuf, size_t& strBufSize)
     MATTER_ERROR err;
     TLVType pathContainer, instanceLocatorContainer;
     bool addSep = false;
-
     VerifyOrExit(reader.GetType() == kTLVType_Path, err = MATTER_ERROR_UNEXPECTED_TLV_ELEMENT);
-
     err = reader.EnterContainer(pathContainer);
     SuccessOrExit(err);
 
